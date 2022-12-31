@@ -36,6 +36,7 @@ async function run() {
         const adminUploadProductCollection = database.collection('adminProducts');
         const adminUploadPotterCollection = database.collection('adminPotter');
         const feedbacksCollection = database.collection('userfeedbacks');
+        const DesignCollection = database.collection('designUser');
 
 
         
@@ -110,6 +111,21 @@ async function run() {
           console.log(user)
             // console.log(like)
             const result=await potterCollection.insertOne(user);
+            res.json(result)
+        });
+
+        // userdesignorder 
+        app.post('/userDesign', async(req,res) =>{
+            const user=req.body;
+          console.log(user)
+            // console.log(like)
+            const result=await DesignCollection.insertOne(user);
+            res.json(result)
+        });
+
+        // getuserdesign 
+        app.get('/userDesign', async(req,res)=>{
+            const result=await DesignCollection.find({}).toArray()
             res.json(result)
         });
 
@@ -249,12 +265,61 @@ async function run() {
         console.log('uodateinf',id);
         res.json(result)
 
+    });
+     // schedule update 
+
+     app.put("/updatesSchedules/:id", async (req, res) => {
+
+        const id=req.params.id;
+        const updateUser=req.body
+        console.log(updateUser)
+        const filter={_id: ObjectId(id)};
+        const options={upsert:true};
+
+        const updateDoc={
+            $set:{
+                schedules:updateUser.schedules,
+                // purchase:updateUser.purchase
+            }
+        }
+        const result=await paymentCollection.updateOne(filter,updateDoc,options);
+        console.log('uodateinf',id);
+        res.json(result)
+
+    })
+     // schedule update 
+
+     app.put("/updatesPurchase/:id", async (req, res) => {
+
+        const id=req.params.id;
+        const updateUser=req.body
+        console.log(updateUser)
+        const filter={_id: ObjectId(id)};
+        const options={upsert:true};
+
+        const updateDoc={
+            $set:{
+                // schedules:updateUser.schedules,
+                purchase:updateUser.purchase
+            }
+        }
+        const result=await paymentCollection.updateOne(filter,updateDoc,options);
+        console.log('uodateinf',id);
+        res.json(result)
+
     })
 
     app.get('/potter/:id', async(req,res)=>{
         const id=req.params.id;
         const query={_id:ObjectId(id)};
         const user=await potterCollection.findOne(query)
+        res.json(user)
+    })
+   
+    app.get('/showpay/:id', async(req,res)=>{
+        const id=req.params.id;
+        const query={_id:ObjectId(id)};
+        const user=await paymentCollection.findOne(query)
         res.json(user)
     })
    
@@ -376,6 +441,21 @@ async function run() {
             }
         }
         const result=await userCollection.updateOne(query,updateDoc);
+        res.json(result)
+    })
+    // update schedule
+
+    app.put('/updateSchedule', async(req,res)=>{
+        const user=req.body;
+        console.log(user)
+        const query={email:user.email}
+        const updateDoc={
+            $set:{
+                schedules:user.schedules,
+                // mobile:user.mobile
+            }
+        }
+        const result=await paymentCollection.updateOne(query,updateDoc);
         res.json(result)
     })
 
