@@ -15,7 +15,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors())
 app.use(express.json())
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.utq7asn.mongodb.net/?retryWrites=true&w=majority`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.utq7asn.mongodb.net/?retryWrites=true&w=majority`;
+// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+var uri = "mongodb://e-commerce-site:jxjFr9MI4pLrJS0s@ac-32bm4ox-shard-00-00.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-01.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-02.utq7asn.mongodb.net:27017/?ssl=true&replicaSet=atlas-1mjf8p-shard-0&authSource=admin&retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
@@ -37,10 +40,11 @@ async function run() {
         const adminUploadPotterCollection = database.collection('adminPotter');
         const feedbacksCollection = database.collection('userfeedbacks');
         const DesignCollection = database.collection('designUser');
+        const PotterServiceCollection = database.collection('potterService');
 
 
         
-    //    post product buyer 
+    //    post product seller
         app.post('/postBuyer', async(req,res) =>{
             const user=req.body;
           console.log(user);
@@ -48,14 +52,32 @@ async function run() {
             const result=await buyerCollection.insertOne(user);
             res.json(result)
         });
+        app.post('/potterservice', async(req,res) =>{
+            const user=req.body;
+          console.log(user);
+          
+            const result=await PotterServiceCollection.insertOne(user);
+            res.json(result)
+        });
+
+        app.get('/potterservicedetails/:id', async(req,res)=>{
+            const id=req.params.id
+            const query={_id:ObjectId(id)}
+            const result=await PotterServiceCollection.findOne(query)
+            res.json(result)
+        });
 
         app.get('/postBuyer', async(req,res)=>{
             const result=await buyerCollection.find({}).toArray()
             res.json(result)
         });
+        app.get('/potterservice', async(req,res)=>{
+            const result=await PotterServiceCollection.find({}).toArray()
+            res.json(result)
+        });
 
         // admin post product to database 
-        //    post product buyer 
+        //    post product buye
         app.post('/postadminProduct', async(req,res) =>{
             const user=req.body;
           console.log(user);
@@ -332,6 +354,21 @@ async function run() {
             const result=await buyerCollection.findOne(query)
             res.json(result)
         });
+        app.get('/adminpotterdetails/:categories', async(req,res)=>{
+            // const id=req.params.id
+            const filter = { _id: ObjectId(req.params.id) };
+            console.log(filter)
+            const post = await PotterServiceCollection.findOne(filter);
+            console.log(post)
+            const check = post?.services?.filter(like => like?._id === req?.params?._id)
+           
+            
+            
+            console.log(check)
+            // const query={_id:ObjectId(id)}
+            // const result=await PotterServiceCollection.findOne(query)
+            // res.json(result)
+        });
         // details show admin product 
         app.get('/details/:id', async(req,res)=>{
             const id=req.params.id
@@ -601,6 +638,46 @@ async function run() {
     });
 
 
+    // app.put("/updatesPurchase/:id", async (req, res) => {
+
+    //     const id=req.params.id;
+    //     const updateUser=req.body
+    //     console.log(updateUser)
+    //     const filter={_id: ObjectId(id)};
+    //     const options={upsert:true};
+
+    //     const updateDoc={
+    //         $set:{
+    //             // schedules:updateUser.schedules,
+    //             purchase:updateUser.purchase
+    //         }
+    //     }
+    //     const result=await paymentCollection.updateOne(filter,updateDoc,options);
+    //     console.log('uodateinf',id);
+    //     res.json(result)
+
+    // })
+
+    // app.put("/service/:id", async (req, res) => {
+    //     console.log(req.body)
+    //     const filter = { _id: ObjectId(req.params.id) };
+    //     console.log(filter)
+    //     const options={upsert:true};
+    //             const updateDoc={
+    //            $push:{
+    //                // schedules:updateUser.schedules,
+    //                services: req.body,
+    //            }
+    //        }
+   
+      
+    //    const result=await PotterServiceCollection.updateMany(filter,updateDoc,options);
+           
+    //        res.send(result);
+    //    });
+    
+
+
     //sslcommerz init
 
 
@@ -618,7 +695,36 @@ async function run() {
     //     const result=await buyerCollection.updateOne(query,updateDoc)
     //     res.json(result)
     //   })
+    // app.put('/updateUser', async(req,res)=>{
+    //     const user=req.body;
+    //     const query={email:user.email}
+    //     const updateDoc={
+    //         $set:{
+    //             address:user.address,
+    //             mobile:user.mobile
+    //         }
+    //     }
+    //     const result=await userCollection.updateOne(query,updateDoc);
+    //     res.json(result)
+    // })
+    app.put('/service', async (req, res) => {
+        
+            console.log(req.body)
+            // const filter = { _id: ObjectId(req.params.id) };
+            const query={
+                categories:req.body.categories}
+            const options = { upsert: true };
+            // const data=req.body
+           
+               
+                    const updateDoc = { $push: { services: req.body } };
+                    const result = await PotterServiceCollection.updateOne(query, updateDoc, options);
+                    res.json(result)
+                
+              
 
+
+    })
 
    
 
