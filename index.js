@@ -31,7 +31,7 @@ async function run() {
         const potterCollection = database.collection('buyerPotter');
         const userCollection = database.collection('users');
         const likeCollection = database.collection('like');
-        const paymentCollection = database.collection('payment');
+        const paymentCollection = database.collection('payment'); 
         const adminPaymentCollection = database.collection('Adminpaymentdata');
         const featuresCollection = database.collection('features');
         const fashionCollection = database.collection('fashion');
@@ -41,6 +41,11 @@ async function run() {
         const feedbacksCollection = database.collection('userfeedbacks');
         const DesignCollection = database.collection('designUser');
         const PotterServiceCollection = database.collection('potterService');
+        const bkashCollection = database.collection('bkashcollection');
+        const withdrawsCollection = database.collection('withdrawCollection');
+        const supportTicketCollection = database.collection('supportTicket');
+        const loveproductCollection = database.collection('loveproduct');
+        const walletTotalCollection = database.collection('walletTotal');
 
 
         
@@ -86,11 +91,203 @@ async function run() {
             res.json(result)
         });
 
+        app.get('/getpostadmin', async(req,res)=>{
+          const result=await adminUploadProductCollection.find({}).toArray()
+          res.json(result)
+      });
+
+      app.get("/editproduct/:id", async (req, res) => {
+        try {
+          const id = req.params.id;
+      
+          // Validate and convert the ID to ObjectId
+          if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid product ID" });
+          }
+      
+          const query = { _id: new ObjectId(id) };
+          const product = await adminUploadProductCollection.findOne(query);
+      
+          if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+          }
+      
+          res.json(product);
+        } catch (error) {
+          console.error("Error fetching product:", error);
+          res.status(500).json({ message: "Internal server error" });
+        }
+      });
+
+
+      // delete 
+     
+      
+      app.delete('/productdelete/:parentId/:index', async (req, res) => {
+        const { parentId, index } = req.params;
+    
+        try {
+            // Validate parentId is a valid ObjectId
+            if (!ObjectId.isValid(parentId)) {
+                return res.status(400).json({ error: 'Invalid product ID format' });
+            }
+    
+            const productId = new ObjectId(parentId);
+    
+            // Ensure index is an integer
+            const serviceIndex = parseInt(index);
+            if (isNaN(serviceIndex)) {
+                return res.status(400).json({ error: 'Invalid service index format' });
+            }
+    
+            // Perform the update operation to remove the service by its index
+            const result = await adminUploadProductCollection.updateOne(
+                { _id: productId }, // Find the product by its _id
+                { $unset: { [`services.${serviceIndex}`]: "" } } // Unset the service at the given index
+            );
+    
+            // Clean up the array to remove any null or undefined values left by $unset
+            await adminUploadProductCollection.updateOne(
+                { _id: productId },
+                { $pull: { services: null } } // Remove null values resulting from $unset
+            );
+    
+            if (result.modifiedCount > 0) {
+                res.status(200).json({ deletedCount: result.modifiedCount });
+            } else {
+                res.status(404).json({ message: 'Product or service not found' });
+            }
+        } catch (err) {
+            console.error('Error deleting service:', err);
+            res.status(500).json({ error: 'An error occurred while deleting the service' });
+        }
+    });
+      
+
+      
+      
+
+app.put("/productupdate/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Validate and convert the ID to ObjectId
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    const query = { _id: new ObjectId(id) };
+    const updatedProduct = req.body;
+
+    const updateDoc = {
+      $set: updatedProduct,
+    };
+
+    const result = await adminUploadProductCollection.updateOne(query, updateDoc);
+
+    if (result.modifiedCount > 0) {
+      res.json({ message: "Product updated successfully", modifiedCount: result.modifiedCount });
+    } else {
+      res.status(400).json({ message: "No changes made" });
+    }
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+
+
+      app.get('/category/:category', async (req, res) => {
+        const category = req.params.category;
+        console.log('Requested Category:', category);
+        
+        try {
+            // Query the database for products where the 'services' array contains an object with the desired category
+            const products = await adminUploadProductCollection.find({
+                'services.categories': category
+            }).toArray();
+            
+            // Transform the data to ensure it fits the frontend expectations
+            const formattedProducts = products.map(product => ({
+                ...product,
+                services: product.services
+                    .filter(service => service.categories === category) // Filter services based on category
+                    .map(service => ({
+                        types: service.types,
+                        ProductPrice: service.ProductPrice,
+                        img: service.img,
+                        categories: service.categories,
+                        description: service.description,
+                        Fabric: service.Fabric,
+                        size: service.size
+                    })) // Map to the required fields
+            }));
+            
+            res.json(formattedProducts);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
+    
+    
+    
+    app.get('/categories/:type', async (req, res) => {
+      const { type } = req.params;
+      console.log(`Received request for type: ${type}`);
+    
+      try {
+        // Fetch data from your collection
+        const data = await adminUploadProductCollection.find({}).toArray();
+    
+        // Filter categories based on the type
+        const categories = data.flatMap(item =>
+          item.services.filter(service => service.types === type)
+        );
+    
+        console.log('Fetched categories:', categories);
+    
+        if (categories.length === 0) {
+          return res.status(404).json({ message: 'No categories found for the specified type.' });
+        }
+    
+        res.json(categories);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        res.status(500).json({ error: 'An error occurred while fetching categories.' });
+      }
+    });
+    
+    
+    
+    
+    
+    
+    
         // app.get('/getAdmin', async(req,res)=>{
         //     const result=await buyerCollection.find({}).toArray()
         //     res.json(result)
         // });
+        app.put('/service', async (req, res) => {
+        
+          console.log(req.body)
+          // const filter = { _id: ObjectId(req.params.id) };
+          const query={
+              types:req.body.types}
+          const options = { upsert: true };
+          // const data=req.body
+         
+             
+                  const updateDoc = { $push: { services: req.body } };
+                  const result = await adminUploadProductCollection.updateOne(query, updateDoc, options);
+                  res.json(result)
+              
+            
 
+
+  });
 
         // admin all product show to ui 
         // get sharee 
@@ -125,6 +322,14 @@ async function run() {
         }
 
     });
+
+
+
+    // love product post the database 
+
+    // Route to handle "like" and product information
+  
+
 
         // potter post 
 
@@ -214,6 +419,101 @@ async function run() {
 
 
       
+
+        // Route to submit payment data
+app.post('/api/payments', async (req, res) => {
+    try {
+      const { bkashNumber, refCode, userId } = req.body;
+      
+      // Create a new payment record with an initial balance of 0 if not exists
+      const newPayment = {
+        bkashNumber,
+        refCode,
+        isVerified: false,
+        amount: 0,
+        userId,
+        mainBalance: 0 // Initialize balance to 0
+      };
+  
+      // Insert payment record
+      await bkashCollection.insertOne(newPayment);
+      res.json({ success: true, message: 'Payment submitted.' });
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+      res.status(500).json({ success: false, message: 'Error submitting payment.' });
+    }
+  });
+  
+
+        // Route for admin to verify payment
+app.post('/api/payments/verify', async (req, res) => {
+    try {
+      const { id } = req.body; // Payment ID
+      const payment = await bkashCollection.findOne({ _id: new ObjectId(id) });
+  
+      if (!payment) {
+        return res.status(404).json({ success: false, message: 'Payment not found.' });
+      }
+  
+      // Verify the payment and update the balance
+      if (!payment.isVerified) {
+        // Verify the payment and add 100 taka to main balance
+        await bkashCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: { isVerified: true, amount: 100 },
+            $inc: { mainBalance: 100 } // Increment main balance by 100 taka
+          }
+        );
+  
+        // Fetch the updated record
+        const updatedPayment = await bkashCollection.findOne({ _id: new ObjectId(id) });
+  
+        res.json({
+          success: true,
+          message: 'Payment verified and balance updated.',
+          mainBalance: updatedPayment.mainBalance
+        });
+      } else {
+        res.json({ success: false, message: 'Payment is already verified.' });
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      res.status(500).json({ success: false, message: 'Error verifying payment.' });
+    }
+  });
+
+//   Route to get all payments (for admin panel)
+app.get('/api/payments', async (req, res) => {
+    try {
+      const payments = await bkashCollection.find().toArray();
+      res.json(payments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      res.status(500).json({ success: false, message: 'Error fetching payments.' });
+    }
+  });
+
+  
+
+  // Route to get user's main balance
+app.get('/api/users/:userId/balance', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const payment = await bkashCollection.findOne({ userId: userId });
+  
+      if (!payment) {
+        return res.status(404).json({ success: false, message: 'User not found.' });
+      }
+  
+      res.json({ success: true, mainBalance: payment.mainBalance });
+    } catch (error) {
+      console.error('Error fetching user balance:', error);
+      res.status(500).json({ success: false, message: 'Error fetching user balance.' });
+    }
+  });
+  
+  
 
        
         
@@ -385,15 +685,109 @@ async function run() {
         });
 
 
-          // add database user collection 
-          app.post('/users', async(req,res)=>{
-            const user=req.body;
-            console.log(user)
-            const result=await userCollection.insertOne(user);
-            // console.log(body)
-            res.json(result);
-           
-        })
+         // Add a route for user registration
+         const { v4: uuidv4 } = require('uuid'); // Import uuidv4
+
+         app.post('/users', async (req, res) => {
+           const newUser = req.body; // Get the new user's data from the request body
+         
+           // Generate a unique transaction ID
+           newUser.tran_id = uuidv4(); // Add tran_id to the newUser object
+         
+           const refCode = newUser.refCode; // Extract the reference code from the new user
+         
+           try {
+             // Insert the new user into the users collection
+             const result = await userCollection.insertOne(newUser);
+             console.log(result)
+             // If a reference code is provided, find the previous user who has this reference code
+             if (refCode) {
+               const previousUser = await userCollection.findOne({ tran_id: refCode });
+         
+               // If a previous user with this reference code exists, update their reference field
+               if (previousUser) {
+                 await userCollection.updateOne(
+                   { _id: previousUser._id },
+                   { $inc: { reference: 50 } } // Increment the reference field by 50 Taka
+                 );
+               }
+             }
+         
+             res.json(result); // Return the response for user registration success
+           } catch (error) {
+             console.error('Error registering user:', error);
+             res.status(500).json({ message: 'Error registering user' });
+           }
+         });
+         
+
+
+       
+
+  // Endpoint to get user details by email
+app.get('/users/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    // console.log(query)
+    const user = await userCollection.findOne(query);
+  
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  });
+app.get('/usersnewdata/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    console.log(query)
+    const user = await userCollection.findOne(query);
+  
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  });
+
+  app.get('/review', async(req,res)=>{
+    const result=await userReviewCollection.find({}).toArray()
+    res.json(result)
+})
+  // Endpoint to get pending users
+app.get('/usersdata/pending', async (req, res) => {
+    try {
+      const pendingUsers = await userCollection.find({ status: 'pending' }).toArray();
+      res.json(pendingUsers);
+    } catch (error) {
+      console.error('Error fetching pending users:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+  
+  // Endpoint to verify user payment and add balance
+app.put('/verify-payment/:email', async (req, res) => {
+    const email = req.params.email;
+    try {
+     
+      const result = await userCollection.updateOne(
+        { email: email },
+        { 
+          $set: { status: 'verified' },
+          $inc: { balance: 100 } // Increment balance by 100
+        }
+      );
+      if (result.modifiedCount > 0) {
+        res.sendStatus(200);
+      } else {
+        res.status(404).send('User not found');
+      }
+    } catch (error) {
+      console.error('Error verifying user:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+  
 
         app.get('/users', async(req,res)=>{
             const result=await userCollection.find({}).toArray()
@@ -823,26 +1217,98 @@ async function run() {
 
      // ================================Like in post admin====================================================
         //Link post----------------------------------------------------------------------------------------
+
+
+        const { ObjectId } = require('mongodb'); // Ensure ObjectId is imported
+
         app.put('/adminlike/:id', async (req, res) => {
             try {
-                // console.log(req.body)
-                const filter = { _id: ObjectId(req.params.id) };
-                const post = await adminUploadProductCollection.findOne(filter);
-                const check = post?.likes?.filter(like => like?.email?.toString() === req?.body?.email).length;
-                if (!check) {
-                    const options = { upsert: true };
-                    const updateDoc = { $push: { likes: req.body } };
-                    const result = await adminUploadProductCollection.updateOne(filter, updateDoc, options);
-                    res.status(200).json(result)
-                } else {
-                    return res.status(400).json({ massage: "Post has not yet been liked" });
+                const postId = req.params.id;
+        
+                // Validate if the provided ID is a valid ObjectId
+                if (!ObjectId.isValid(postId)) {
+                    console.error(`Invalid ID format: ${postId}`);
+                    return res.status(400).json({ message: "Invalid post ID format" });
                 }
-
+        
+                const filter = { _id: new ObjectId(postId) };
+                const userLike = { email: req.body.email, userId: req.body.userId };
+        
+                // Find the post
+                const post = await adminUploadProductCollection.findOne(filter);
+                if (!post) {
+                    return res.status(404).json({ message: "Post not found" });
+                }
+        
+                // Check if the user has already liked the post
+                const alreadyLiked = post.likes.some(like => like.email === req.body.email);
+        
+                if (alreadyLiked) {
+                    return res.status(400).json({ message: "Post already liked by this user" });
+                }
+        
+                // Add the like
+                const updateDoc = { $push: { likes: userLike } };
+                const result = await adminUploadProductCollection.updateOne(filter, updateDoc);
+                if (result.modifiedCount === 0) {
+                    return res.status(400).json({ message: "Failed to update like" });
+                }
+        
+                // Fetch and return the updated post
+                const updatedPost = await adminUploadProductCollection.findOne(filter);
+                res.status(200).json(updatedPost);
+        
             } catch (err) {
-                res.status(500).send('Server Error')
+                console.error('Error in PUT /adminlike/:id', err);
+                res.status(500).send('Server Error');
             }
-
         });
+        
+        
+      
+      
+      
+      
+      
+        app.delete('/adminlike/:id', async (req, res) => {
+          try {
+              const postId = req.params.id;
+      
+              // Validate if the provided ID is a valid ObjectId
+              if (!ObjectId.isValid(postId)) {
+                  console.error(`Invalid ID format: ${postId}`);
+                  return res.status(400).json({ message: "Invalid post ID format" });
+              }
+      
+              const filter = { _id: new ObjectId(postId) };
+              const userEmail = req.body.email;
+      
+              // Remove the like
+              const updateDoc = { $pull: { likes: { email: userEmail } } };
+              const result = await adminUploadProductCollection.updateOne(filter, updateDoc);
+      
+              if (result.modifiedCount === 0) {
+                  return res.status(400).json({ message: "Like not found or already removed" });
+              }
+      
+              // Fetch and return the updated post
+              const updatedPost = await adminUploadProductCollection.findOne(filter);
+              res.status(200).json(updatedPost);
+      
+          } catch (err) {
+              console.error('Error in DELETE /adminlike/:id', err);
+              res.status(500).send('Server Error');
+          }
+      });
+      
+      
+    
+    
+      
+      
+      
+      
+      
 
           //admin unLink post-----------------------------------------------------------------------------------------
           app.put('/adminunlike/:id', async (req, res) => {
@@ -867,81 +1333,766 @@ async function run() {
 // =======================================================================================================================
 
 
+// Route to handle 'like' (saving the product)
+app.post('/addLikedProductdata', async (req, res) => {
+  const { categories, size, img, description,ProductPrice, userEmail } = req.body;
+  console.log(req.body)
+  
+ 
+
+  try {
+    
+    
+    const newProduct = {
+      categories,
+      size,
+      img,
+      description,
+      ProductPrice,
+      userEmail,
+      likedAt: new Date(), // Optional: add a timestamp
+    };
+
+    const result = await loveproductCollection.insertOne(newProduct);
+    console.log(result)
+    res.status(201).send({ message: 'Product liked successfully', data: result.ops });
+  } catch (error) {
+    console.error('Error adding liked product:', error);
+    res.status(500).send({ message: 'Server error', error });
+  }
+});
+
+
+app.get("/getlovesproduct", async (req, res) => {
+  const page = req.query.page;
+  const size = parseInt(req.query.size);
+  const query = req.query;
+  delete query.page
+  delete query.size
+  Object.keys(query).forEach(key => {
+      if (!query[key])
+          delete query[key]
+  });
+
+  if (Object.keys(query).length) {
+      const cursor = loveproductCollection.find(query, status = "approved");
+      const count = await cursor.count()
+      const allQuestions = await cursor.skip(page * size).limit(size).toArray()
+      res.json({
+          allQuestions, count
+      });
+  } else {
+      const cursor = loveproductCollection.find({
+          // status: "approved"
+      });
+      const count = await cursor.count()
+      const allQuestions = await cursor.skip(page * size).limit(size).toArray()
+
+      res.json({
+          allQuestions, count
+      });
+  }
+
+});
+
+
+app.post('/update-balance', async (req, res) => {
+  const { email, amount } = req.body;
+
+  try {
+    const user = await userCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    const newBalance = user.balance + amount;
+    await userCollection.updateOne(
+      { email },
+      { $set: { balance: newBalance } }
+    );
+
+    res.status(200).send({ balance: newBalance });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 
 
     //sslcommerz init
-app.post('/init', async(req, res) => {
-    // console.log(req.body)
-    const email=req.body.cartProducts.map((data)=>data.buyerEmail)
-    const schedule=req.body.cartProducts.map((data)=>data.schedule)
-    const adminemail=req.body.cartProducts.map((data)=>data.adminEmail)
-    console.log(email)
-    console.log(schedule)
-    const data = {
-        emails:email,
-        admindata:adminemail,
-        total_amount: req.body.total_amount,
-        currency: req.body.currency,
-        tran_id: uuidv4(),
-        success_url: 'https://sarong-site.onrender.com/success',
-        fail_url: 'https://sarong-site.onrender.com/fail',
-        cancel_url: 'https://sarong-site.onrender.com/cancel',
-        ipn_url: 'http://yoursite.com/ipn',
-        shipping_method: 'Courier',
-        product_name: "req.body.product_name",
-        product_category: 'Electronic',
-        product_profile: "req.body.product_profile",
-        cus_name: req.body.cus_name,
-        cus_email: req.body.cus_email,
-        date: req.body.date,
+    app.post('/init', async (req, res) => {
+      try {
+        const { cartProducts, total_amount, select_courier, product_name, product_profile, cus_name, cus_email, date, status, address, Thana, Area_Bazar, cus_postcode, District, payment_number, schedules, purchase,courier_id,wallet_amount,phone } = req.body;
         
-        status: req.body.status,
-        cartProducts: req.body.cartProducts,
-        // buyerDetails: req.body.email,
-        // buyerDetails: req.body.console.log(cartProducts),
-        product_image: "https://i.ibb.co/t8Xfymf/logo-277198595eafeb31fb5a.png",
-        cus_add1: req.body.cus_add1,
-        cus_add2: 'Dhaka',
-        cus_city: req.body.cus_city,
-        schedules: req.body.schedules,
-        purchase: req.body.purchase,
-        cus_state:  req.body.cus_state,
-        cus_postcode: req.body.cus_postcode,
-        cus_country: req.body.cus_country,
-        cus_phone: req.body.cus_phone,
-        cus_fax: '01711111111',
-        ship_name: 'Customer Name',
-        ship_add1: 'Dhaka',
-        ship_add2: 'Dhaka',
-        ship_city: 'Dhaka',
-        ship_state: 'Dhaka',
-        ship_postcode: 1000,
-        ship_country: 'Bangladesh',
-        multi_card_name: 'mastercard',
-        value_a: 'ref001_A',
-        value_b: 'ref002_B',
-        value_c: 'ref003_C',
-        value_d: 'ref004_D'
-    };
-    // insert order data into database 
-    const order=await paymentCollection.insertOne(data)
-    console.log(data)
-    const sslcommer = new SSLCommerzPayment(process.env.STORE_ID,process.env.STORE_PASSWORD,false) //true for live default false for sandbox
-    sslcommer.init(data).then(data => {
-        //process the response that got from sslcommerz 
-        //https://developer.sslcommerz.com/doc/v4/#returned-parameters
-        // console.log(data);
-        // res.redirect(data.GatewayPageURL)
-        if(data.GatewayPageURL){
-            res.json(data.GatewayPageURL)
-          }
-          else{
-            return res.status(400).json({
-              message:'payment session failed'
-            })
-          }
+        if (!cartProducts || !cus_name || !cus_email) {
+          return res.status(400).json({ message: 'Missing required fields' });
+        }
+        
+        const email = cartProducts.map((data) => data.buyerEmail);
+        const adminemail = cartProducts.map((data) => data.adminEmail);
+        
+        // Calculate total income
+        const totalIncome = cartProducts.reduce((acc, data) => acc + (data.totalIncome || 0), 0);
+    
+        const data = {
+          emails: email,
+          admindata: adminemail,
+          total_amount: total_amount || 0,
+          Totalincome: totalIncome,
+          tran_id: uuidv4(),
+          ipn_url: 'http://yoursite.com/ipn',
+          shipping_method: 'Courier',
+          product_name: product_name || 'Default Product Name',
+          product_category: 'Electronic',
+          product_profile: product_profile || 'Default Product Profile',
+          cus_name,
+          cus_email,
+          wallet_amount,
+          phone,
+          date,
+          select_courier,
+          status,
+          courier_id,
+          cartProducts,
+          product_image: 'https://i.ibb.co/t8Xfymf/logo-277198595eafeb31fb5a.png',
+          address,
+          cus_add2: 'Dhaka',
+          Thana,
+          schedules,
+          purchase,
+          Area_Bazar,
+          cus_postcode,
+          District,
+          payment_number,
+         
+        };
+    
+        const order = await paymentCollection.insertOne(data);
+        console.log(data);
+        res.status(200).json({ message: 'Order successfully inserted', orderId: order.insertedId });
+      } catch (error) {
+        console.error('Error processing order:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+      }
     });
-})
+    
+
+
+    // Endpoint to get total income
+  app.get('/totalIncome/:email', async (req, res) => {
+    try {
+      const email = req.params.email;
+      const orders = await paymentCollection.find({ cus_email: email }).toArray();
+      console.log(orders)
+
+      // Calculate total income
+      const totalIncome = orders.flatMap(order => order.cartProducts.map(product => product.totalIncome))
+                                .reduce((acc, income) => acc + income, 0);
+                                console.log(totalIncome)
+      res.json({ Totalincome: totalIncome });
+    } catch (error) {
+      console.error('Error fetching total income:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
+
+
+  app.get("/myincome/:email", async (req, res) => {
+    try {
+      const email = req.params.email;
+      const orders = await paymentCollection.find({ cus_email: email,status: "completed" }).toArray();
+      console.log(orders)
+  
+      // Calculate total income
+      const totalIncome = orders.reduce((sum, order) => {
+        return sum + order.cartProducts.reduce((subTotal, product) => {
+          return subTotal + (product.totalIncome || 0);
+        }, 0);
+      }, 0);
+
+      
+  
+      res.json({ totalIncome  });
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
+
+  
+
+  // Endpoint to fetch payment data by user's email
+  // Endpoint to fetch payment data by user's email
+ // Endpoint to fetch payment data by user's email
+// Endpoint to fetch payment data by user's email
+// Endpoint to fetch unprocessed payment data by user's email
+
+// app.get('/calculate-wallet/:email', async (req, res) => {
+//   const { email } = req.params;
+
+//   if (!email) {
+//     return res.status(400).json({ message: 'Email is required.' });
+//   }
+
+//   try {
+//     console.log(`Fetching payments for user: ${email}`);
+
+//     // Fetch all payments for the user with valid wallet_amount and status 'Processed'
+//     const payments = await paymentCollection.find({
+//       cus_email: email,
+//       wallet_amount: { $exists: true, $ne: null }
+//     }).toArray();
+
+//     console.log(`Found ${payments.length} payments for the user.`);
+
+//     let totalWalletAmount = 0;
+
+//     payments.forEach(payment => {
+//       let walletAmount = payment.wallet_amount;
+//       console.log(`Processing payment ID ${payment._id} with wallet_amount: ${walletAmount}`);
+
+//       // Convert wallet_amount to a float if it's a string
+//       if (typeof walletAmount === 'string') {
+//         walletAmount = parseFloat(walletAmount);
+//         console.log(`Converted wallet_amount to float: ${walletAmount}`);
+//       }
+
+//       // Only sum valid, non-NaN wallet_amounts greater than 0
+//       if (!isNaN(walletAmount) && walletAmount > 0) {
+//         totalWalletAmount += walletAmount;
+//       } else {
+//         console.log(`Invalid wallet_amount found: ${walletAmount}`);
+//       }
+//     });
+
+//     console.log(`Total wallet_amount to deduct: ${totalWalletAmount}`);
+
+//     // Fetch the user by email
+//     const user = await userCollection.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found.' });
+//     }
+
+//     const currentBalance = user.balance;
+//     console.log(`Current balance: ${currentBalance}`);
+
+//     // Check if current balance is greater than or equal to totalWalletAmount
+//     if (currentBalance < totalWalletAmount) {
+//       console.log('Insufficient balance for this deduction.');
+//       return res.status(400).json({ message: 'Insufficient balance for this deduction.' });
+//     }
+
+//     // Subtract total wallet amount from the user's current balance
+//     const newBalance = currentBalance - totalWalletAmount;
+//     console.log(`New balance after deduction: ${newBalance}`);
+
+//     // Update the user's balance in the database
+//     await userCollection.updateOne(
+//       { email },
+//       { $set: { balance: newBalance } }
+//     );
+
+//     // Mark the relevant payments as processed
+//     await paymentCollection.updateMany(
+//       { _id: { $in: payments.map(payment => payment._id) } },
+//       { $set: { processed: true } }
+//     );
+
+//     res.json({
+//       message: `A total of BDT ${totalWalletAmount} was deducted from your balance.`,
+//       newBalance
+//     });
+//   } catch (error) {
+//     console.error('Error during wallet amount processing:', error);
+//     res.status(500).json({ message: 'Internal server error.' });
+//   }
+// });
+
+
+// Route to fetch wallet amounts and update user balance
+// Backend API code
+app.get('/payment-collection/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    // Step 1: Find all unprocessed payments associated with the user's email
+    const payments = await paymentCollection.find({ cus_email: email, processed: { $ne: true } }).toArray();
+
+    // Step 2: Initialize total wallet data to 0
+    let alltotalwalletdata = 0;
+
+    if (payments && payments.length > 0) {
+      // Step 3: Sum all wallet_amount values if payments exist
+      alltotalwalletdata = payments.reduce((total, payment) => {
+        const walletAmount = parseFloat(payment.wallet_amount || 0); // Ensure wallet_amount is a number
+        return total + walletAmount;
+      }, 0);
+    }
+
+    // Step 4: Find the user in userCollection
+    const user = await userCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).json({  });
+    }
+
+    // Step 5: Calculate the updated balance (current balance - total wallet amount)
+    const currentBalance = parseFloat(user.balance || 0); // Ensure balance is a number
+    const updatedBalance = currentBalance - alltotalwalletdata;
+
+    // Step 6: Update the user's balance in userCollection
+    const updateResult = await userCollection.updateOne(
+      { email },
+      { $set: { balance: updatedBalance } }
+    );
+
+    // Step 7: Handle the case where the balance update fails
+    if (updateResult.modifiedCount === 0) {
+      return res.status(500).json({  });
+    }
+
+    // Step 8: Mark all found payments as processed
+    await paymentCollection.updateMany(
+      { cus_email: email, processed: { $ne: true } },
+      { $set: { processed: true } }
+    );
+
+    // Step 9: Send the response back with updated balance and total wallet data
+    res.status(200).json({
+      // message: 'Balance updated successfully',
+      updatedBalance,
+      alltotalwalletdata,
+      payments
+    });
+
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    res.status(500).json({ message: 'Error processing payment data', error });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+// Endpoint to update user's balance
+// Endpoint to update user's balance
+// Endpoint to update user's balance
+
+
+
+
+
+
+
+  // Endpoint to update balance in userCollection and reset total income in paymentCollection
+// Endpoint to add total income to balance and reset total income
+// Update user's balance
+app.patch('/api/pull-income/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+
+    // Fetch the current balance of the user
+    const user = await userCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Convert balance from string to number (if necessary)
+    const currentBalance = user.balance || 0; // Ensure currentBalance is a number
+
+    // Fetch all payment records for the user
+    const payments = await paymentCollection.find({ cus_email: email }).toArray();
+    if (payments.length === 0) {
+      return res.status(404).json({ message: 'No income records found for this user' });
+    }
+
+    // Calculate total income from all payment records
+    const totalIncome = payments.reduce((sum, payment) => {
+      return sum + payment.cartProducts.reduce((subTotal, product) => {
+        return subTotal + (product.totalIncome || 0);
+      }, 0);
+    }, 0);
+
+    console.log('Total Income:', totalIncome); // Debugging log
+
+    // Calculate the new balance
+    const newBalance = currentBalance + totalIncome;
+
+    // Update user's balance in the database (store as an integer)
+    const resultBalance = await userCollection.updateOne(
+      { email },
+      { $set: { balance: newBalance } } // Store balance as integer
+    );
+
+    // Reset total income in payment records
+    const resultIncome = await paymentCollection.updateMany(
+      { cus_email: email },
+      { $set: { 'cartProducts.$[].totalIncome': 0 } }
+    );
+
+    if (resultBalance.matchedCount > 0 && resultIncome.modifiedCount > 0) {
+      res.json({ message: 'Total income has been added to balance and reset successfully' });
+    } else {
+      res.status(500).json({ message: 'Failed to update balance or reset income record' });
+    }
+  } catch (error) {
+    console.error('Error updating balance and income:', error.message);
+    res.status(500).json({
+      message: 'Error updating balance and income',
+      error: error.message,
+    });
+  }
+});
+
+
+
+// Endpoint to pull income to balance
+app.patch('/api/reference-pull-income/:email', async (req, res) => {
+  const email = req.params.email;
+
+  try {
+    // Find the user by email
+    const user = await userCollection.findOne({ email: email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Calculate new balance
+    const newBalance = user.balance + user.reference;
+
+    // Update the user's balance and reset total income
+    const result = await userCollection.updateOne(
+      { email: email },
+      {
+        $set: { balance: newBalance, reference: 0 }
+      }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: 'Income successfully pulled to balance' });
+    } else {
+      res.status(500).json({ message: 'Failed to update user balance' });
+    }
+  } catch (error) {
+    console.error('Error pulling income:', error);
+    res.status(500).json({ message: 'An error occurred while processing your request' });
+  }
+});
+
+
+// get reference code 
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await userCollection.find().toArray();
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+
+// address the get 
+// get reference code 
+app.get('/newaddress', async (req, res) => {
+  try {
+    const users = await paymentCollection.find().toArray();
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+
+
+
+// Submit a withdrawal request
+// Submit a withdrawal request
+app.post('/api/withdraw', async (req, res) => {
+  const { email, amount, paymentMethod, mobileNumber } = req.body;
+
+  // Convert amount to a number
+  const numericAmount = Number(amount);
+
+  if (isNaN(numericAmount)) {
+    return res.status(400).json({ message: 'Invalid amount' });
+  }
+
+  try {
+    const user = await userCollection.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (numericAmount > user.balance) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Create a new withdrawal request
+    const newRequest = {
+      email,
+      amount: numericAmount,
+      paymentMethod,
+      mobileNumber,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    // Insert the withdrawal request into the collection
+    await withdrawsCollection.insertOne(newRequest);
+
+    // Update the user's unpaid amount and balance
+    await userCollection.updateOne(
+      { email },
+      { $inc: { unpaidAmount: numericAmount, balance: -numericAmount } }
+    );
+
+    res.json({ message: 'Withdrawal request submitted successfully.' });
+  } catch (error) {
+    console.error('Error submitting withdrawal request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+
+// Admin approves a withdrawal request
+app.patch('/api/approve-withdraw/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the withdrawal request by ID
+    const request = await withdrawsCollection.findOne({ _id: new ObjectId(id) });
+    if (!request) return res.status(404).json({ message: 'Withdrawal request not found' });
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ message: 'This request has already been processed' });
+    }
+
+    // Find the user by email
+    const user = await userCollection.findOne({ email: request.email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Update user's paid and unpaid amounts
+    await userCollection.updateOne(
+      { email: request.email },
+      { $inc: { paidAmount: request.amount, unpaidAmount: -request.amount } }
+    );
+
+    // Update the request status
+    await withdrawsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'approved' } }
+    );
+
+    res.json({ message: 'Withdrawal request approved successfully.' });
+  } catch (error) {
+    console.error('Error approving withdrawal request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// Fetch all pending withdrawal requests
+app.get('/api/withdraw-requests', async (req, res) => {
+  try {
+    const requests = await withdrawsCollection.find({ status: 'pending' }).toArray();
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Approve a withdrawal request
+app.patch('/api/approve-withdraw/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the withdrawal request by ID
+    const request = await withdrawsCollection.findOne({ _id: new ObjectId(id) });
+    if (!request) return res.status(404).json({ message: 'Withdrawal request not found' });
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ message: 'This request has already been processed' });
+    }
+
+    // Find the user by email
+    const user = await userCollection.findOne({ email: request.email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Update user's paid and unpaid amounts
+    await userCollection.updateOne(
+      { email: request.email },
+      { $inc: { paidAmount: request.amount, unpaidAmount: -request.amount } }
+    );
+
+    // Update the request status
+    await withdrawsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'approved' } }
+    );
+
+    res.json({ message: 'Withdrawal request approved successfully.' });
+  } catch (error) {
+    console.error('Error approving withdrawal request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// Fetch withdrawal history for a user
+app.get('/api/withdraw-history/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    // Find withdrawal requests for the given user
+    const requests = await withdrawsCollection.find({ email }).toArray();
+
+    // Return the list of requests
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching withdrawal history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+app.put('/updateCourier/:id', (req, res) => {
+  const id = req.params.id;
+  const { courier_id } = req.body;
+
+  // Find the document and update the courier_id
+  paymentCollection.updateOne({ _id: ObjectId(id) }, { $set: { courier_id } }, (err, result) => {
+    if (err) {
+      res.status(500).json({ error: 'Failed to update courier ID' });
+    } else {
+      res.json({ message: 'Courier ID updated successfully' });
+    }
+  });
+});
+
+
+
+
+
+// Endpoint to get user details
+app.get('/api/user-details', async (req, res) => {
+  const { email } = req.query; // Get email from query params
+
+  try {
+   
+    // Find user by email
+    const user = await userCollection.findOne({ email });
+
+    if (user) {
+      // Send user details as a response
+      res.status(200).send({
+        name: user.displayName,
+        email: user.email,
+        referralCode: user.refCode,
+        tran_id:user.tran_id
+      });
+    } else {
+      res.status(404).send({ message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).send({ message: 'Server error' });
+  }
+});
+    
+
+// support ticket 
+
+app.post('/api/support-ticket', async (req, res) => {
+  const { subject, type, message } = req.body;
+  
+  try {
+    // Save the support ticket data to the database
+    await supportTicketCollection.insertOne({ subject, type, message, createdAt: new Date() });
+    res.status(200).json({ message: 'Support ticket submitted successfully.' });
+  } catch (error) {
+    console.error('Error saving support ticket:', error);
+    res.status(500).json({ message: 'Failed to submit support ticket.' });
+  }
+});
+
+// Example Express.js route
+app.get('/api/support-tickets', async (req, res) => {
+  try {
+    const tickets = await supportTicketCollection.find({}).toArray(); // Adjust based on your DB
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+
+    
 
 app.post('/success',async(req,res)=>{
     // console.log(req.body)
@@ -989,14 +2140,31 @@ app.post ('/fail', async(req,res)=>{
 // email get my Order==============================================
  // get myorder 
  app.get("/myOrder/:email", async (req, res) => {
-    // const buyeremail=req.body.cartProducts.map((data)=>data.buyerEmail)
-    console.log(req.params.email);
+  try {
     const email = req.params.email;
-    const result = await paymentCollection
-      .find({ cus_email: email })
-      .toArray();
+    const status = req.query.status || ''; // Get status from query parameters
+    const date = req.query.date || ''; // Get date from query parameters
+
+    // Build the filter query
+    const filter = { cus_email: email };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (date) {
+      const formattedDate = new Date(date).toLocaleDateString(); // Format the date to match with database entries
+      filter.date = formattedDate;
+    }
+
+    const result = await paymentCollection.find(filter).toArray();
     res.send(result);
-  });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
  app.get("/my/:email", async (req, res) => {
     // const buyeremail=req.body.emails.map((data)=>data.buyerEmail)
     // console.log(emails)
@@ -1009,15 +2177,36 @@ app.post ('/fail', async(req,res)=>{
     res.send(result);
   });
 
+
+  // filter data my order 
+  app.get('/api/orders', async (req, res) => {
+    try {
+        const { date, status } = req.query;
+        let filter = {};
+
+        if (date) {
+            filter.date = new Date(date);
+        }
+        if (status && status !== 'all') {
+            filter.status = status;
+        }
+
+        const orders = await paymentCollection.find(filter).toArray();
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
   // get admin page myorder 
-  app.get("/userMy/:email", async (req, res) => {
+  app.get("/userMy", async (req, res) => {
     // const buyeremail=req.body.emails.map((data)=>data.buyerEmail)
     // console.log(emails)
     // console.log(req.params.email);
     const email = req.params.email;
     console.log(email)
     const result = await paymentCollection
-      .find({ admindata: email })
+      .find({ })
       .toArray();
     res.send(result);
   });
@@ -1030,11 +2219,31 @@ app.post ('/fail', async(req,res)=>{
 
   // my order delete ----------
 // Delete manage all product ----------
-app.delete("/manageAllOrderDelete/:id", async (req, res) => {
-    const result = await paymentCollection.deleteOne({_id:ObjectId(req.params.id)});
-    res.send(result);
-  });
 
+
+
+app.delete("/manageAllOrderDelete/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Convert id to ObjectId
+    const objectId = new ObjectId(id);
+    
+    // Attempt to delete the document
+    const result = await paymentCollection.deleteOne({ _id: objectId });
+
+    // Check if deletion was successful
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Respond with success
+    res.status(200).json({ message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ message: 'An error occurred while deleting the order' });
+  }
+});
 
 //   post features product 
 //    post product buyer 
@@ -1109,16 +2318,49 @@ app.get('/adminConfarm', async(req,res)=>{
 });
 
  // upadate status for put api 
- app.put('/updateStatus/:id', async(req,res)=>{
-    const id=req.params.id;
-    const updateDoc=req.body.status;
-    console.log(updateDoc)
-    console.log(updateDoc)
-    const filter={_id:ObjectId(id)}
-    const result=await paymentCollection.updateOne(filter,{
-        $set:{status:updateDoc}
-    })
-    res.json(result)
+ app.put('/updateStatus/:id', async (req, res) => {
+  const id = req.params.id;
+  const newStatus = req.body.status; // New status from request body
+  console.log(newStatus);
+
+  try {
+      // Fetch the current order details
+      const currentOrder = await paymentCollection.findOne({ _id: ObjectId(id) });
+
+      if (!currentOrder) {
+          return res.status(404).json({ message: 'Order not found' });
+      }
+
+      // Get the current status and track order
+      const previousStatus = currentOrder.status;
+      const currentTrackOrder = currentOrder.trackOrder || '';
+
+      // Create the new track order format
+      const updatedTrackOrder = currentTrackOrder
+          ? `${currentTrackOrder} | ${previousStatus}`
+          : previousStatus; // Initialize with previous status if trackOrder is empty
+
+      // Update the order status and track order
+      const result = await paymentCollection.updateOne(
+          { _id: ObjectId(id) },
+          {
+              $set: {
+                  status: newStatus,
+                  trackOrder: updatedTrackOrder
+              }
+          }
+      );
+
+      // Check if the update was successful
+      if (result.modifiedCount === 0) {
+          return res.status(400).json({ message: 'Failed to update status' });
+      }
+
+      res.json({ message: 'Order status updated successfully', result });
+  } catch (error) {
+      console.error('Error updating order status:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 
