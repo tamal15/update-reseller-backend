@@ -1867,6 +1867,16 @@ app.get('/newaddress', async (req, res) => {
   }
 });
 
+app.get('/newaddressdata/:email', async (req, res) => {
+  try {
+    const email = req.params.email; // Extract the email from the URL
+    const data = await paymentCollection.find({cus_email: email }).toArray(); // Query by email
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
 
 
 // Submit a withdrawal request
@@ -2069,11 +2079,11 @@ app.get('/api/user-details', async (req, res) => {
 // support ticket 
 
 app.post('/api/support-ticket', async (req, res) => {
-  const { subject, type, message } = req.body;
+  const { subject, type, message,email } = req.body;
   
   try {
     // Save the support ticket data to the database
-    await supportTicketCollection.insertOne({ subject, type, message, createdAt: new Date() });
+    await supportTicketCollection.insertOne({ subject, type, message,email, date: new Date().toLocaleDateString() });
     res.status(200).json({ message: 'Support ticket submitted successfully.' });
   } catch (error) {
     console.error('Error saving support ticket:', error);
@@ -2090,6 +2100,43 @@ app.get('/api/support-tickets', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tickets' });
   }
 });
+
+app.get('/api/support-tickets/:email', async (req, res) => {
+  try {
+    const email = req.params.email; // Extract the email from the URL
+    const tickets = await supportTicketCollection.find({ email }).toArray(); // Query by email
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+
+
+
+app.delete("/ticketdelete/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Convert id to ObjectId
+    const objectId = new ObjectId(id);
+    
+    // Attempt to delete the document
+    const result = await supportTicketCollection.deleteOne({ _id: objectId });
+
+    // Check if deletion was successful
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Respond with success and deletedCount
+    res.status(200).json({ message: 'Deleted successfully', deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ message: 'An error occurred while deleting the order' });
+  }
+});
+
 
 
     
