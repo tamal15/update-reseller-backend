@@ -221,7 +221,8 @@ app.put("/productupdate/:id", async (req, res) => {
                         categories: service.categories,
                         description: service.description,
                         Fabric: service.Fabric,
-                        size: service.size
+                        size: service.size,
+                        multipleimg: service.multipleimg,
                     })) // Map to the required fields
             }));
             
@@ -271,23 +272,16 @@ app.put("/productupdate/:id", async (req, res) => {
         //     res.json(result)
         // });
         app.put('/service', async (req, res) => {
-        
-          console.log(req.body)
-          // const filter = { _id: ObjectId(req.params.id) };
-          const query={
-              types:req.body.types}
+          console.log(req.body);
+          const query = { types: req.body.types };
           const options = { upsert: true };
-          // const data=req.body
-         
-             
-                  const updateDoc = { $push: { services: req.body } };
-                  const result = await adminUploadProductCollection.updateOne(query, updateDoc, options);
-                  res.json(result)
-              
-            
-
-
-  });
+          
+          const updateDoc = { $push: { services: req.body } };
+          const result = await adminUploadProductCollection.updateOne(query, updateDoc, options);
+          
+          res.json(result);
+        });
+        
 
         // admin all product show to ui 
         // get sharee 
@@ -2030,6 +2024,22 @@ app.get('/api/withdraw-history/:email', async (req, res) => {
 });
 
 
+app.get('/all/withdraw-history', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    // Find withdrawal requests for the given user
+    const requests = await withdrawsCollection.find({  }).toArray();
+
+    // Return the list of requests
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching withdrawal history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 
 app.put('/updateCourier/:id', (req, res) => {
   const id = req.params.id;
@@ -2046,6 +2056,20 @@ app.put('/updateCourier/:id', (req, res) => {
 });
 
 
+app.get('/userbalancedata/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    // Find withdrawal requests for the given user
+    const requests = await userCollection.find({ email }).toArray();
+
+    // Return the list of requests
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching withdrawal history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 
@@ -2246,7 +2270,7 @@ app.post ('/fail', async(req,res)=>{
 });
 
   // get admin page myorder 
-  app.get("/userMy", async (req, res) => {
+  app.get("/adminuserMy", async (req, res) => {
     // const buyeremail=req.body.emails.map((data)=>data.buyerEmail)
     // console.log(emails)
     // console.log(req.params.email);
@@ -2256,6 +2280,17 @@ app.post ('/fail', async(req,res)=>{
       .find({ })
       .toArray();
     res.send(result);
+  });
+
+
+  app.get('/userMy/:email', async (req, res) => {
+    try {
+      const email = req.params.email; // Extract the email from the URL
+      const tickets = await paymentCollection.find({cus_email: email }).toArray(); // Query by email
+      res.json(tickets);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch tickets' });
+    }
   });
 
   //   delete api myorder 
