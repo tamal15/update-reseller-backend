@@ -18,8 +18,18 @@ app.use(express.json())
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.utq7asn.mongodb.net/?retryWrites=true&w=majority`;
 // const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-var uri = "mongodb://e-commerce-site:jxjFr9MI4pLrJS0s@ac-32bm4ox-shard-00-00.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-01.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-02.utq7asn.mongodb.net:27017/?ssl=true&replicaSet=atlas-1mjf8p-shard-0&authSource=admin&retryWrites=true&w=majority";
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+// var uri = "mongodb://e-commerce-site:jxjFr9MI4pLrJS0s@ac-32bm4ox-shard-00-00.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-01.utq7asn.mongodb.net:27017,ac-32bm4ox-shard-00-02.utq7asn.mongodb.net:27017/?ssl=true&replicaSet=atlas-1mjf8p-shard-0&authSource=admin&retryWrites=true&w=majority";
+// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pea6x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
 
 async function run() {
 
@@ -2283,10 +2293,10 @@ app.post ('/fail', async(req,res)=>{
   });
 
 
-  app.get('/userMy/:email', async (req, res) => {
+  app.get('/userMy', async (req, res) => {
     try {
       const email = req.params.email; // Extract the email from the URL
-      const tickets = await paymentCollection.find({cus_email: email }).toArray(); // Query by email
+      const tickets = await paymentCollection.find({ }).toArray(); // Query by email
       res.json(tickets);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch tickets' });
