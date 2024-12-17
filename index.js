@@ -56,6 +56,8 @@ async function run() {
         const supportTicketCollection = database.collection('supportTicket');
         const loveproductCollection = database.collection('loveproduct');
         const walletTotalCollection = database.collection('walletTotal');
+        const bannerpartCollection = database.collection('bannerpart');
+        const upcommingpartCollection = database.collection('upcomming');
 
 
         
@@ -86,8 +88,16 @@ async function run() {
             const result=await buyerCollection.find({}).toArray()
             res.json(result)
         });
+        app.get('/bannerparts', async(req,res)=>{
+            const result=await bannerpartCollection.find({}).toArray()
+            res.json(result)
+        });
         app.get('/potterservice', async(req,res)=>{
             const result=await PotterServiceCollection.find({}).toArray()
+            res.json(result)
+        });
+        app.get('/getupcommings', async(req,res)=>{
+            const result=await upcommingpartCollection.find({}).toArray()
             res.json(result)
         });
 
@@ -568,6 +578,71 @@ app.get('/api/users/:userId/balance', async (req, res) => {
         const user=await buyerCollection.findOne(query)
         res.json(user)
     })
+    app.get('/getsbannerparts/:id', async(req,res)=>{
+        const id=req.params.id;
+        const query={_id:ObjectId(id)};
+        const user=await bannerpartCollection.findOne(query)
+        res.json(user)
+    })
+    app.get('/getsproductupcomming/:id', async(req,res)=>{
+        const id=req.params.id;
+        const query={_id:ObjectId(id)};
+        const user=await upcommingpartCollection.findOne(query)
+        res.json(user)
+    })
+
+    app.put('/commingpartupdates/:id', async (req, res) => {
+      const bannerId = req.params.id;
+      const updatedBanner = req.body;  // This no longer includes the _id field
+    
+      try {
+        // Update the banner in MongoDB
+        const result = await upcommingpartCollection.updateOne(
+          { _id: new ObjectId(bannerId) }, // ObjectId for matching the correct document
+          { $set: updatedBanner } // Set the updated data
+        );
+    
+        if (result.modifiedCount > 0) {
+          res.status(200).json({ message: "Banner updated successfully", modifiedCount: result.modifiedCount });
+        } else {
+          res.status(404).json({ message: "Banner not found or no changes made" });
+        }
+      } catch (error) {
+        console.error('Error updating banner:', error);
+        res.status(500).json({ message: "Error updating banner", error: error.message });
+      }
+    });
+    
+    
+
+    app.put("/bannerdataupdates/:id", async (req, res) => {
+      const { id } = req.params;
+      const { typewriter1, typewriter2, typewriter3, image1, image2, image3 } = req.body;
+    
+      try {
+        const result = await bannerpartCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              typewriter1,
+              typewriter2,
+              typewriter3,
+              image1,
+              image2,
+              image3,
+            },
+          }
+        );
+    
+        if (result.modifiedCount > 0) {
+          res.json({ modifiedCount: result.modifiedCount, message: "Banner updated successfully" });
+        } else {
+          res.status(404).json({ message: "Banner not found or no changes made" });
+        }
+      } catch (error) {
+        res.status(500).json({ message: "Failed to update banner", error });
+      }
+    });
    
 
 
@@ -758,39 +833,41 @@ app.get('/usersnewdata/:email', async (req, res) => {
     const result=await userReviewCollection.find({}).toArray()
     res.json(result)
 })
-  // Endpoint to get pending users
-app.get('/usersdata/pending', async (req, res) => {
-    try {
-      const pendingUsers = await userCollection.find({ status: 'pending' }).toArray();
-      res.json(pendingUsers);
-    } catch (error) {
-      console.error('Error fetching pending users:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  });
   
-  // Endpoint to verify user payment and add balance
+
+app.get('/usersdata/pending', async (req, res) => {
+  try {
+    const pendingUsers = await userCollection.find({ status: 'pending' }).toArray();
+    res.json(pendingUsers);
+  } catch (error) {
+    console.error('Error fetching pending users:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Endpoint to verify user payment and add balance
 app.put('/verify-payment/:email', async (req, res) => {
-    const email = req.params.email;
-    try {
-     
-      const result = await userCollection.updateOne(
-        { email: email },
-        { 
-          $set: { status: 'verified' },
-          $inc: { balance: 100 } // Increment balance by 100
-        }
-      );
-      if (result.modifiedCount > 0) {
-        res.sendStatus(200);
-      } else {
-        res.status(404).send('User not found');
+  const email = req.params.email;
+  try {
+   
+    const result = await userCollection.updateOne(
+      { email: email },
+      { 
+        $set: { status: 'verified' },
+        $inc: { balance: 100 } // Increment balance by 100
       }
-    } catch (error) {
-      console.error('Error verifying user:', error);
-      res.status(500).send('Internal Server Error');
+    );
+    if (result.modifiedCount > 0) {
+      res.sendStatus(200);
+    } else {
+      res.status(404).send('User not found');
     }
-  });
+  } catch (error) {
+    console.error('Error verifying user:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
   
 
         app.get('/users', async(req,res)=>{
@@ -1339,7 +1416,7 @@ app.put('/verify-payment/:email', async (req, res) => {
 
 // Route to handle 'like' (saving the product)
 app.post('/addLikedProductdata', async (req, res) => {
-  const { categories, size, img, description,ProductPrice, userEmail } = req.body;
+  const { categories, size, img, description,ProductPrice, userEmail,multipleimg } = req.body;
   console.log(req.body)
   
  
@@ -1351,6 +1428,7 @@ app.post('/addLikedProductdata', async (req, res) => {
       categories,
       size,
       img,
+      multipleimg,
       description,
       ProductPrice,
       userEmail,
@@ -1366,6 +1444,12 @@ app.post('/addLikedProductdata', async (req, res) => {
   }
 });
 
+app.delete("/loveprojectdelete/:id", async (req, res) => {
+  const result = await loveproductCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+  });
+  res.json(result);
+});
 
 app.get("/getlovesproduct", async (req, res) => {
   const page = req.query.page;
@@ -1851,11 +1935,17 @@ app.patch('/api/reference-pull-income/:email', async (req, res) => {
 // get reference code 
 app.get('/api/users', async (req, res) => {
   try {
-    const users = await userCollection.find().toArray();
-    res.json(users);
+    // Fetch all users from the collection
+    const users = await userCollection.find({}).toArray();
+
+    if (users.length > 0) {
+      res.json(users); // Return all users to the frontend
+    } else {
+      res.status(404).json({ message: 'No users found' });
+    }
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Error fetching users' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
